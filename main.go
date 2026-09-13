@@ -1,22 +1,21 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"time"
 )
 
 const PORT = ":8080"
+const SERVER_ADDR_ROOT = "http://localhost"
+const FILE_PATH_ROOT = "."
 
 func main() {
 	mux := http.NewServeMux()
-	
-	/* Set file directory to root */ 
-	directory := http.Dir("./")
 
-	/* Create file handler/server with root directory */ 
+	/* Serve HTML files from the root directory */
+	directory := http.Dir(FILE_PATH_ROOT)
 	fileServer := http.FileServer(directory)
-
-	/* Set base path to serve static html using the file server */
 	mux.Handle("/", fileServer)
 	
 
@@ -27,5 +26,6 @@ func main() {
 		Handler: mux,
 	}
 
+	log.Printf("Server running on %s\n", SERVER_ADDR_ROOT + PORT)
 	srv.ListenAndServe()
 }
