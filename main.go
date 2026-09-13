@@ -22,15 +22,7 @@ func main() {
 
 	dir := http.Dir(FILE_PATH_ROOT)
 	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(dir) ))
-
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-		w.WriteHeader(200)
-		resp := "OK"
-		w.Write([]byte(resp))
-
-	})
+	mux.HandleFunc("/healthz", healtzHandler)
 	
 
 	srv := http.Server{
@@ -43,4 +35,10 @@ func main() {
 	log.Printf("Server running on %s\n", URL_ROOT)
 	log.Printf("Fun image availabile at %s\n", URL_ROOT + IMAGE_PATH)
 	log.Fatal(srv.ListenAndServe())
+}
+
+func healtzHandler(w http.ResponseWriter, r *http.Request){
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
