@@ -9,18 +9,28 @@ import (
 const PORT = ":8080"
 const SERVER_ADDR_ROOT = "http://localhost"
 const FILE_PATH_ROOT = "."
-const IMAGE_PATH = "/assets/logo.png"
+const IMAGE_PATH = "/assets"
+const URL_PREFIX = "/app"
+
+
 
 func main() {
-	const URL_ROOT = SERVER_ADDR_ROOT + PORT
+	const URL_ROOT = SERVER_ADDR_ROOT + PORT + URL_PREFIX
 
 	mux := http.NewServeMux()
 
-	/* Serve HTML files from the root directory */
-	directory := http.Dir(FILE_PATH_ROOT)
-	fileServer := http.FileServer(directory)
 
-	mux.Handle("/", fileServer)
+	dir := http.Dir(FILE_PATH_ROOT)
+	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(dir) ))
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+		w.WriteHeader(200)
+		resp := "OK"
+		w.Write([]byte(resp))
+
+	})
 	
 
 	srv := http.Server{
