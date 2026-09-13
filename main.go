@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync/atomic"
@@ -19,18 +20,24 @@ type apiConfig struct {
 
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	cfg.fileServerHits.Add(1)
-	return next
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+		cfg.fileServerHits.Add(1)
+		next.ServeHTTP(w, r)
+	})
 }
 
-func (cfg *apiConfig) resetMetrics() {
+func (cfg *apiConfig) resetMetrics(w http.ResponseWriter, r *http.Request){
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	cfg.fileServerHits.Store(0)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
 func (cfg *apiConfig) serveMetrics(w http.ResponseWriter, r *http.Request){
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	resp := "Hits : " +  string(cfg.fileServerHits.Load())
+	resp := fmt.Sprintf("Hits: %d", cfg.fileServerHits.Load())
+	log.Printf("Serving metrics with %d hits", cfg.fileServerHits.Load())
 	w.Write([]byte(resp))
 }
 
@@ -44,8 +51,9 @@ func main() {
 
 	dir := http.Dir(FILE_PATH_ROOT)
 	mux.Handle("/app/", cfg.middlewareMetricsInc((http.StripPrefix("/app", http.FileServer(dir)))))
-	mux.HandleFunc("/healthz", healtzHandler)
+	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/metrics", cfg.serveMetrics)
+	mux.HandleFunc("/reset", cfg.resetMetrics)
 	
 
 	srv := http.Server{
@@ -56,17 +64,11 @@ func main() {
 	}
 
 	log.Printf("Server running on %s\n", URL_ROOT)
-	log.Printf("Fun image availabile at %s\n", URL_ROOT + IMAGE_PATH)
 	log.Fatal(srv.ListenAndServe())
 }
 
-func healtzHandler(w http.ResponseWriter, r *http.Request){
+func healthzHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
-}
-
-func metricsHandler(w http.ResponseWriter, r *http.Request){
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
 }
